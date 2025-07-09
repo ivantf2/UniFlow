@@ -68,6 +68,10 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+enum class Screen {
+    Calendar, Tasks
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
@@ -82,7 +86,10 @@ fun MainScreen(
     val context = LocalContext.current
     FirebaseFirestore.getInstance()
 
-    // dohvati zadatke iz firestorea prilikom prvog prikaza ekrana
+    var currentScreen by remember { mutableStateOf(Screen.Calendar) }
+
+
+    // dohvati obaveze (tasks u firestore) iz firestorea prilikom prvog prikaza ekrana
     LaunchedEffect(Unit) {
         loadTasksForUser(
             onTasksLoaded = { tasks ->
@@ -102,13 +109,20 @@ fun MainScreen(
                 Text("Izbornik", modifier = Modifier.padding(16.dp), fontWeight = FontWeight.Bold)
                 HorizontalDivider()
 
-                NavigationDrawerItem(label = { Text("Kalendar") }, selected = false, onClick = {
+                NavigationDrawerItem(label = { Text("Kalendar") }, selected = currentScreen == Screen.Calendar, onClick = {
+                    currentScreen = Screen.Calendar
                     scope.launch { drawerState.close() }
                 })
 
-                NavigationDrawerItem(label = { Text("Obaveze") }, selected = false, onClick = {
-                    scope.launch { drawerState.close() }
-                })
+
+                NavigationDrawerItem(
+                    label = { Text("Obaveze") },
+                    selected = currentScreen == Screen.Tasks,
+                    onClick = {
+                        currentScreen = Screen.Tasks
+                        scope.launch { drawerState.close() }
+                    }
+                )
 
                 NavigationDrawerItem(label = { Text("Postavke") }, selected = false, onClick = {
                     scope.launch { drawerState.close() }
@@ -145,7 +159,7 @@ fun MainScreen(
                         )
                     )
                 },
-                floatingActionButton = { //  Ovdje je sad ispravno
+                floatingActionButton = {
                     FloatingActionButton(
                         onClick = { showDialog = true },
                         containerColor = Color(0xFF31E981),
@@ -162,12 +176,37 @@ fun MainScreen(
                         .background(MaterialTheme.colorScheme.surface)
                         .padding(16.dp)
                 ) {
-                    FunctionalCalendar(taskList) { selectedDay = it }
-                    Spacer(modifier = Modifier.height(16.dp))
-                    selectedDay?.let { day ->
-                        Text("Obaveze za ${formatDate(day)}:")
-                        taskList.filter { it.first == day }.forEach { task ->
-                            Text(task.third)
+
+
+                    when (currentScreen) {
+                        Screen.Calendar -> {
+                            FunctionalCalendar(taskList) { selectedDay = it }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            selectedDay?.let { day ->
+                                Text("Obaveze za ${formatDate(day)}:")
+                                taskList.filter { it.first == day }.forEach { task ->
+                                    Text(task.third)
+                                }
+                            }
+                        }
+
+                        Screen.Tasks -> {
+                            Text("Sve obaveze:", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            taskList.sortedBy { it.first }.forEach { task ->
+                                Column(modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp)) {
+                                    Text(
+                                        text = formatDate(task.first),
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = task.third,
+                                        modifier = Modifier.padding(start = 8.dp)
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -181,7 +220,7 @@ fun MainScreen(
                                 if (success) {
                                     taskList.add(Triple(date, color, details))
                                 } else {
-                                    // možeš dodati Toast za grešku ovdje (ali u Compose treba Context)
+                                    // handlanje gresaka
                                 }
                                 showDialog = false
                             }
