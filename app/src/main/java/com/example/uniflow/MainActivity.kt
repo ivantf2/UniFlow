@@ -29,7 +29,6 @@ import java.util.*
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.rememberDatePickerState
-import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
 import com.example.uniflow.ui.theme.UniFlowTheme
 import com.google.firebase.auth.FirebaseAuth
@@ -59,7 +58,15 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             UniFlowTheme(darkTheme = isDarkThemeState.value) {
-                MainScreen(username = username, onSaveTask = { date, color, details, onComplete ->
+                MainScreen(
+                    username = username,
+                    isDarkMode = isDarkThemeState.value,
+                    onToggleDarkMode = { enabled ->
+                        isDarkThemeState.value = enabled
+                        val prefs = getSharedPreferences("uniflow_prefs", MODE_PRIVATE)
+                        prefs.edit().putBoolean("dark_mode", enabled).apply()
+                    },
+                    onSaveTask = { date, color, details, onComplete ->
                     saveTask(date, color, details, onComplete)
                 })
             }
@@ -69,13 +76,15 @@ class MainActivity : ComponentActivity() {
 }
 
 enum class Screen {
-    Calendar, Tasks
+    Calendar, Tasks, Settings, Help, About
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     username: String,
+    isDarkMode: Boolean,
+    onToggleDarkMode: (Boolean)-> Unit,
     onSaveTask: (LocalDate, Color, String, (Boolean) -> Unit) -> Unit
 ) {
     val taskList = remember { mutableStateListOf<Triple<LocalDate, Color, String>>() }
@@ -83,7 +92,7 @@ fun MainScreen(
     var selectedDay by remember { mutableStateOf<LocalDate?>(null) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    val context = LocalContext.current
+    LocalContext.current
     FirebaseFirestore.getInstance()
 
     var currentScreen by remember { mutableStateOf(Screen.Calendar) }
@@ -124,10 +133,14 @@ fun MainScreen(
                     }
                 )
 
-                NavigationDrawerItem(label = { Text("Postavke") }, selected = false, onClick = {
-                    scope.launch { drawerState.close() }
-                    context.startActivity(Intent(context, SettingsActivity::class.java))
-                })
+                NavigationDrawerItem(
+                    label = { Text("Postavke") },
+                    selected = currentScreen == Screen.Settings,
+                    onClick = {
+                        currentScreen = Screen.Settings
+                        scope.launch { drawerState.close() }
+                    }
+                )
 
                 NavigationDrawerItem(label = { Text("Pomoć") }, selected = false, onClick = {})
                 NavigationDrawerItem(label = { Text("O nama") }, selected = false, onClick = {})
@@ -207,6 +220,17 @@ fun MainScreen(
                                     )
                                 }
                             }
+                        }
+                        Screen.Settings -> {
+                            SettingsContent(isDarkMode = isDarkMode, onToggleDarkMode = onToggleDarkMode)
+                        }
+                        Screen.Help -> {
+                            //dodaj kasnije
+
+                        }
+                        Screen.About -> {
+                            // dodaj kasnije
+
                         }
                     }
                 }
@@ -304,6 +328,31 @@ fun loadTasksForUser(
         .addOnFailureListener { exception ->
             onError(exception)
         }
+}
+
+@Composable
+fun SettingsContent(
+    isDarkMode: Boolean,
+    onToggleDarkMode: (Boolean) -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text("Postavke", fontWeight = FontWeight.Bold, fontSize = 24.sp)
+        Spacer(modifier = Modifier.height(24.dp))
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Tamni način rada")
+            Spacer(modifier = Modifier.width(8.dp))
+            Switch(
+                checked = isDarkMode,
+                onCheckedChange = onToggleDarkMode
+            )
+        }
+    }
 }
 
 
