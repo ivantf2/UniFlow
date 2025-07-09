@@ -32,6 +32,8 @@ import androidx.compose.material3.rememberDatePickerState
 import android.content.Intent
 import androidx.compose.ui.platform.LocalContext
 import com.example.uniflow.ui.theme.UniFlowTheme
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import java.time.ZoneId
 
 
@@ -57,21 +59,41 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             UniFlowTheme(darkTheme = isDarkThemeState.value) {
-                MainScreen(username = username)
+                MainScreen(username = username, onSaveTask = { date, color, details, onComplete ->
+                    saveTask(date, color, details, onComplete)
+                })
             }
         }
+
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainScreen(username: String) {
+fun MainScreen(
+    username: String,
+    onSaveTask: (LocalDate, Color, String, (Boolean) -> Unit) -> Unit
+) {
     val taskList = remember { mutableStateListOf<Triple<LocalDate, Color, String>>() }
     var showDialog by remember { mutableStateOf(false) }
     var selectedDay by remember { mutableStateOf<LocalDate?>(null) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    FirebaseFirestore.getInstance()
+
+    // dohvati zadatke iz firestorea prilikom prvog prikaza ekrana
+    LaunchedEffect(Unit) {
+        loadTasksForUser(
+            onTasksLoaded = { tasks ->
+                taskList.clear()
+                taskList.addAll(tasks)
+            },
+            onError = {
+                // dodaj kod za handlanje gresaka kasnije
+            }
+        )
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -123,7 +145,7 @@ fun MainScreen(username: String) {
                         )
                     )
                 },
-                floatingActionButton = { // ✅ Ovdje je sad ispravno
+                floatingActionButton = { //  Ovdje je sad ispravno
                     FloatingActionButton(
                         onClick = { showDialog = true },
                         containerColor = Color(0xFF31E981),
@@ -154,14 +176,95 @@ fun MainScreen(username: String) {
                     AddTaskDialog(
                         onDismiss = { showDialog = false },
                         onSave = { date, color, details ->
-                            taskList.add(Triple(date, color, details))
-                            showDialog = false
+                            // Pozovi spremanje u Firestore
+                            onSaveTask(date, color, details) { success ->
+                                if (success) {
+                                    taskList.add(Triple(date, color, details))
+                                } else {
+                                    // možeš dodati Toast za grešku ovdje (ali u Compose treba Context)
+                                }
+                                showDialog = false
+                            }
                         }
                     )
                 }
             }
         }
     )
+}
+
+fun saveTask(date: LocalDate, color: Color, details: String, onComplete: (Boolean) -> Unit) {
+    val userId = FirebaseAuth.getInstance().currentUser?.uid
+    if (userId == null) {
+        onComplete(false)
+        return
+    }
+
+    val db = FirebaseFirestore.getInstance()
+
+
+    val task = hashMapOf(
+        "date" to date.toString(),
+        "color" to listOf(color.red, color.green, color.blue, color.alpha),
+        "details" to details
+    )
+
+    db.collection("Users")
+        .document(userId)
+        .collection("Tasks")
+        .add(task)
+        .addOnSuccessListener {
+            onComplete(true)
+        }
+        .addOnFailureListener {
+            onComplete(false)
+        }
+}
+
+fun loadTasksForUser(
+    onTasksLoaded: (List<Triple<LocalDate, Color, String>>) -> Unit,
+    onError: (Exception) -> Unit
+) {
+    val userId = FirebaseAuth.getInstance().currentUser?.uid
+    if (userId == null) {
+        onTasksLoaded(emptyList())
+        return
+    }
+
+    val db = FirebaseFirestore.getInstance()
+    db.collection("Users")
+        .document(userId)
+        .collection("Tasks")
+        .get()
+        .addOnSuccessListener { result ->
+            val tasks = mutableListOf<Triple<LocalDate, Color, String>>()
+            for (document in result) {
+                val dateStr = document.getString("date")
+                val details = document.getString("details") ?: ""
+
+                // dohvacanje boje obaveze iz firestorea, inace dolazi do crasha prilikom prijave
+                val colorList = document.get("color") as? List<*>
+                val color = if (colorList != null && colorList.size >= 4) {
+                    Color(
+                        red = (colorList[0] as Double).toFloat(),
+                        green = (colorList[1] as Double).toFloat(),
+                        blue = (colorList[2] as Double).toFloat(),
+                        alpha = (colorList[3] as Double).toFloat()
+                    )
+                } else {
+                    Color(0xFF31E981)
+                }
+
+                if (dateStr != null) {
+                    val date = LocalDate.parse(dateStr)
+                    tasks.add(Triple(date, color, details))
+                }
+            }
+            onTasksLoaded(tasks)
+        }
+        .addOnFailureListener { exception ->
+            onError(exception)
+        }
 }
 
 
@@ -240,7 +343,7 @@ fun AddTaskDialog(onDismiss: () -> Unit, onSave: (LocalDate, Color, String) -> U
     var taskTime by remember { mutableStateOf("") }
 
     val selectedDate: LocalDate? = datePickerState.selectedDateMillis?.let {
-        java.time.Instant.ofEpochMilli(it).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+        java.time.Instant.ofEpochMilli(it).atZone(ZoneId.systemDefault()).toLocalDate()
     }
 
     AlertDialog(
