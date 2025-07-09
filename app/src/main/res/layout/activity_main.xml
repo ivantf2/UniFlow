@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/night">
+
+    <!-- Top bar -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:orientation="horizontal"
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:background="@color/dark_slate_gray"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:gravity="center_vertical">
+
+        <!-- Menu button -->
+        <ImageButton
+            android:id="@+id/btnMenu"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@android:drawable/ic_menu_more"
+            android:background="@android:color/transparent"
+            android:tint="@color/lavender_web" />
+
+        <!-- App title -->
+        <TextView
+            android:id="@+id/tvTitle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="UniFlow"
+            android:textSize="20sp"
+            android:textColor="@color/lavender_web"
+            android:layout_marginStart="16dp"
+            android:layout_weight="1" />
+
+        <!-- Profile icon -->
+        <ImageView
+            android:id="@+id/ivProfile"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:src="@android:drawable/sym_def_app_icon"
+            android:layout_marginStart="16dp"
+            android:contentDescription="Profile" />
+
+    </LinearLayout>
+
+    <!-- Main content placeholder -->
+    <TextView
+        android:id="@+id/tvWelcome"
+        android:layout_below="@id/topBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Welcome, [Username]!"
+        android:textSize="18sp"
+        android:textColor="@color/lavender_web"
+        android:layout_margin="24dp" />
+
+</RelativeLayout>

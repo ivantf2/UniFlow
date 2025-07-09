@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="night">#00120B</color>
+    <color name="dark_slate_gray">#35605A</color>
+    <color name="slate_gray">#6B818C</color>
+    <color name="lavender_web">#D8E4FF</color>
+    <color name="spring_green">#31E981</color>
+</resources>
