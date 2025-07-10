@@ -1,5 +1,6 @@
 package com.example.uniflow
 
+import android.annotation.SuppressLint
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -34,9 +35,15 @@ import com.example.uniflow.ui.theme.UniFlowTheme
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import java.time.ZoneId
+import android.content.Context
+import android.content.Intent
+import android.widget.Toast
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.core.content.edit
 
 
-
+@Suppress("NAME_SHADOWING")
 class MainActivity : ComponentActivity() {
 
     private var isDarkThemeState = mutableStateOf(false)
@@ -64,7 +71,7 @@ class MainActivity : ComponentActivity() {
                     onToggleDarkMode = { enabled ->
                         isDarkThemeState.value = enabled
                         val prefs = getSharedPreferences("uniflow_prefs", MODE_PRIVATE)
-                        prefs.edit().putBoolean("dark_mode", enabled).apply()
+                        prefs.edit { putBoolean("dark_mode", enabled) }
                     },
                     onSaveTask = { date, color, details, onComplete ->
                     saveTask(date, color, details, onComplete)
@@ -142,8 +149,23 @@ fun MainScreen(
                     }
                 )
 
-                NavigationDrawerItem(label = { Text("Pomoć") }, selected = false, onClick = {})
-                NavigationDrawerItem(label = { Text("O nama") }, selected = false, onClick = {})
+                NavigationDrawerItem(
+                    label = { Text("Pomoć") },
+                    selected = currentScreen == Screen.Help,
+                    onClick = {
+                        currentScreen = Screen.Help
+                        scope.launch { drawerState.close() }
+                    }
+                )
+
+                NavigationDrawerItem(
+                    label = { Text("O nama") },
+                    selected = currentScreen == Screen.About,
+                    onClick = {
+                        currentScreen = Screen.About
+                        scope.launch { drawerState.close() }
+                    }
+                )
             }
         },
         content = {
@@ -225,12 +247,10 @@ fun MainScreen(
                             SettingsContent(isDarkMode = isDarkMode, onToggleDarkMode = onToggleDarkMode)
                         }
                         Screen.Help -> {
-                            //dodaj kasnije
-
+                            PomocScreen()
                         }
                         Screen.About -> {
-                            // dodaj kasnije
-
+                            ONamaScreen()
                         }
                     }
                 }
@@ -354,6 +374,135 @@ fun SettingsContent(
         }
     }
 }
+
+@SuppressLint("QueryPermissionsNeeded")
+fun sendEmail(context: Context, to: String, subject: String, body: String) {
+    val intent = Intent(Intent.ACTION_SEND).apply {
+        type = "message/rfc822"
+        putExtra(Intent.EXTRA_EMAIL, arrayOf(to))
+        putExtra(Intent.EXTRA_SUBJECT, subject)
+        putExtra(Intent.EXTRA_TEXT, body)
+    }
+
+        // dijalog gdje korisnik treba odabrat email aplikaciju kojom se salje mail
+    if (intent.resolveActivity(context.packageManager) != null) {
+        context.startActivity(Intent.createChooser(intent, "Pošalji email putem..."))
+    } else {
+        Toast.makeText(context, "Nema instalirane email aplikacije", Toast.LENGTH_LONG).show()
+    }
+}
+
+
+@Composable
+fun KontaktForma() {
+    val context = LocalContext.current
+
+    var ime by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
+    var poruka by remember { mutableStateOf("") }
+
+    Column {
+        Text("Kontaktirajte nas", style = MaterialTheme.typography.titleMedium)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        OutlinedTextField(
+            value = ime,
+            onValueChange = { ime = it },
+            label = { Text("Vaše ime") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = email,
+            onValueChange = { email = it },
+            label = { Text("Email adresa") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        OutlinedTextField(
+            value = poruka,
+            onValueChange = { poruka = it },
+            label = { Text("Poruka") },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp),
+            maxLines = 5
+        )
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(onClick = {
+            val naslov = "Kontakt poruka od $ime"
+            val sadrzaj = "Ime: $ime\nEmail: $email\n\nPoruka:\n$poruka"
+            sendEmail(
+                context = context,
+                to = "ivan.pribanic04@gmail.com",
+                subject = naslov,
+                body = sadrzaj
+            )
+        }) {
+            Text("Pošalji")
+        }
+    }
+}
+
+
+
+
+@Composable
+fun PomocScreen() {
+    val scrollState = rememberScrollState()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .padding(16.dp)
+    ) {
+        Text("Pomoć", style = MaterialTheme.typography.headlineSmall)
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Upute za korištenje aplikacije:", fontWeight = FontWeight.Bold)
+
+        Spacer(modifier = Modifier.height(8.dp))
+        Text("• Dodavanje zadatka: Na glavnom ekranu kliknite '+' kako biste unijeli novi zadatak.")
+        Text("• Kalendar: Prikazuje sve vaše zadatke po datumima.")
+        Text("• Obaveze: Kronološki popis obaveza kako nebi zaboravili aktivnosti.")
+        Text("• Dark mode: Dostupan u postavkama aplikacije.")
+        Text("• Sinkronizacija: Vaši podaci su spremljeni putem Firestore baze podataka na Firebase-u.")
+
+        Spacer(modifier = Modifier.height(16.dp))
+        Text("Ako imate dodatna pitanja, obratite se putem kontakt forme.")
+        Spacer(modifier = Modifier.height(24.dp))
+        KontaktForma()
+    }
+}
+
+@Composable
+fun ONamaScreen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text("O nama", style = MaterialTheme.typography.headlineSmall)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Text(
+            """
+            Ova aplikacija rezultat je suradnje između Ivana Pribanića i Karla Lausa na projektnim zadacima tijekom kolegija.
+            
+            Cilj aplikacije je pomoći studentima u organizaciji dnevnih i tjednih obaveza, uključujući predavanja, ispite i zadatke.
+            
+            Razvoj aplikacije nastavljen je od strane Ivana Pribanića kao dio završnog rada.
+            """.trimIndent()
+        )
+    }
+}
+
 
 
 @Composable
