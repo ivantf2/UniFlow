@@ -94,6 +94,7 @@ fun MainScreen(
     onToggleDarkMode: (Boolean)-> Unit,
     onSaveTask: (LocalDate, Color, String, (Boolean) -> Unit) -> Unit
 ) {
+
     val taskList = remember { mutableStateListOf<Triple<LocalDate, Color, String>>() }
     var showDialog by remember { mutableStateOf(false) }
     var selectedDay by remember { mutableStateOf<LocalDate?>(null) }
@@ -104,6 +105,9 @@ fun MainScreen(
 
     var currentScreen by remember { mutableStateOf(Screen.Calendar) }
 
+    fun resetLocalTasks() {
+        taskList.clear()
+    }
 
     // dohvati obaveze (tasks u firestore) iz firestorea prilikom prvog prikaza ekrana
     LaunchedEffect(Unit) {
@@ -244,7 +248,13 @@ fun MainScreen(
                             }
                         }
                         Screen.Settings -> {
-                            SettingsContent(isDarkMode = isDarkMode, onToggleDarkMode = onToggleDarkMode)
+                            SettingsContent(
+                                isDarkMode = isDarkMode,
+                                onToggleDarkMode = onToggleDarkMode,
+                                onResetData = {
+                                    resetLocalTasks()
+                                }
+                            )
                         }
                         Screen.Help -> {
                             PomocScreen()
@@ -353,11 +363,17 @@ fun loadTasksForUser(
 @Composable
 fun SettingsContent(
     isDarkMode: Boolean,
-    onToggleDarkMode: (Boolean) -> Unit
+    onToggleDarkMode: (Boolean) -> Unit,
+    onResetData: () -> Unit
 ) {
+    val context = LocalContext.current
+    val user = FirebaseAuth.getInstance().currentUser
+    var showDialog by remember { mutableStateOf(false) }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
         Text("Postavke", fontWeight = FontWeight.Bold, fontSize = 24.sp)
@@ -372,6 +388,46 @@ fun SettingsContent(
                 onCheckedChange = onToggleDarkMode
             )
         }
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Button(onClick = {
+            showDialog = true
+        }, colors = ButtonDefaults.buttonColors(containerColor = Color.Red)) {
+            Text("Resetiraj podatke", color = Color.White)
+        }
+
+        if (showDialog) {
+            AlertDialog(
+                onDismissRequest = { showDialog = false },
+                title = { Text("Potvrda") },
+                text = { Text("Jeste li sigurni da želite obrisati sve svoje podatke? Ova radnja je nepovratna.") },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showDialog = false
+                        user?.uid?.let { uid ->
+                            obrisiSvePodatkeKorisnika(
+                                userId = uid,
+                                onSuccess = {
+                                    Toast.makeText(context, "Podaci uspješno obrisani.", Toast.LENGTH_SHORT).show()
+                                    onResetData()
+                                },
+                                onFailure = {
+                                    Toast.makeText(context, "Greška pri brisanju: ${it.message}", Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                        }
+                    }) {
+                        Text("Da")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDialog = false }) {
+                        Text("Ne")
+                    }
+                }
+            )
+        }
+
     }
 }
 
@@ -502,6 +558,29 @@ fun ONamaScreen() {
         )
     }
 }
+
+fun obrisiSvePodatkeKorisnika(userId: String, onSuccess: () -> Unit, onFailure: (Exception) -> Unit) {
+    val db = FirebaseFirestore.getInstance()
+    val tasksCollection = db.collection("Users").document(userId).collection("Tasks")
+
+    tasksCollection.get()
+        .addOnSuccessListener { result ->
+            if (result.isEmpty) {
+                onSuccess()  // Nema zadataka za brisati
+                return@addOnSuccessListener
+            }
+
+            val batch = db.batch()
+            for (document in result.documents) {
+                batch.delete(document.reference)
+            }
+            batch.commit()
+                .addOnSuccessListener { onSuccess() }
+                .addOnFailureListener { e -> onFailure(e) }
+        }
+        .addOnFailureListener { e -> onFailure(e) }
+}
+
 
 
 
