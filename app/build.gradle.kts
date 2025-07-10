@@ -29,6 +29,7 @@ android {
             )
         }
     }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
@@ -61,7 +62,6 @@ dependencies {
     implementation(libs.androidx.appcompat)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
-    //androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
@@ -73,6 +73,8 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4:1.8.2")
     debugImplementation("androidx.compose.ui:ui-test-manifest:1.8.2")
+    androidTestImplementation ("androidx.test:rules:1.5.0")
+    androidTestImplementation ("androidx.test:core:1.5.0")
 
     androidTestImplementation(platform("androidx.compose:compose-bom:2024.05.00"))
 

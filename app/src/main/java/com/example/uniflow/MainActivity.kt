@@ -14,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
@@ -41,6 +40,14 @@ import android.widget.Toast
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.core.content.edit
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.testTag
 
 
 @Suppress("NAME_SHADOWING")
@@ -100,7 +107,7 @@ fun MainScreen(
     var selectedDay by remember { mutableStateOf<LocalDate?>(null) }
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
-    LocalContext.current
+    val context = LocalContext.current
     FirebaseFirestore.getInstance()
 
     var currentScreen by remember { mutableStateOf(Screen.Calendar) }
@@ -136,6 +143,7 @@ fun MainScreen(
 
 
                 NavigationDrawerItem(
+                    modifier = Modifier.testTag("tabObaveze"),
                     label = { Text("Obaveze") },
                     selected = currentScreen == Screen.Tasks,
                     onClick = {
@@ -145,6 +153,7 @@ fun MainScreen(
                 )
 
                 NavigationDrawerItem(
+                    modifier = Modifier.testTag("tabPostavke"),
                     label = { Text("Postavke") },
                     selected = currentScreen == Screen.Settings,
                     onClick = {
@@ -154,6 +163,7 @@ fun MainScreen(
                 )
 
                 NavigationDrawerItem(
+                    modifier = Modifier.testTag("tabPomoc"),
                     label = { Text("Pomoć") },
                     selected = currentScreen == Screen.Help,
                     onClick = {
@@ -163,6 +173,7 @@ fun MainScreen(
                 )
 
                 NavigationDrawerItem(
+                    modifier = Modifier.testTag("tabONama"),
                     label = { Text("O nama") },
                     selected = currentScreen == Screen.About,
                     onClick = {
@@ -170,6 +181,24 @@ fun MainScreen(
                         scope.launch { drawerState.close() }
                     }
                 )
+
+                Spacer(modifier = Modifier.height(36.dp))
+
+                Button(
+                    onClick = {
+                        scope.launch { drawerState.close() }
+                        taskList.clear()
+                        logout(context)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
+                    modifier = Modifier
+                        .fillMaxWidth(0.7f)  // button širina 70% drawer širine
+                        .padding(vertical = 8.dp)
+                        .align(Alignment.CenterHorizontally)
+                ) {
+                    Text(text = "Odjava", color = Color.White ,fontWeight = FontWeight.Bold)
+                }
+
             }
         },
         content = {
@@ -202,7 +231,8 @@ fun MainScreen(
                     FloatingActionButton(
                         onClick = { showDialog = true },
                         containerColor = Color(0xFF31E981),
-                        contentColor = Color.White
+                        contentColor = Color.White,
+                        modifier = Modifier.testTag("addTaskButton")
                     ) {
                         Text("+")
                     }
@@ -219,7 +249,9 @@ fun MainScreen(
 
                     when (currentScreen) {
                         Screen.Calendar -> {
-                            FunctionalCalendar(taskList) { selectedDay = it }
+                            Box(modifier = Modifier.testTag("CalendarView")) {
+                                FunctionalCalendar(taskList) { selectedDay = it }
+                            }
                             Spacer(modifier = Modifier.height(16.dp))
                             selectedDay?.let { day ->
                                 Text("Obaveze za ${formatDate(day)}:")
@@ -229,25 +261,43 @@ fun MainScreen(
                             }
                         }
 
+
                         Screen.Tasks -> {
-                            Text("Sve obaveze:", fontWeight = FontWeight.Bold, fontSize = 20.sp)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            taskList.sortedBy { it.first }.forEach { task ->
-                                Column(modifier = Modifier
+                            Column(
+                                modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 4.dp)) {
-                                    Text(
-                                        text = formatDate(task.first),
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                    Text(
-                                        text = task.third,
-                                        modifier = Modifier.padding(start = 8.dp)
-                                    )
+                                    .testTag("tasksScreen")
+                                    .padding(16.dp)
+                            ) {
+                                Text("Sve obaveze:", fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                taskList.sortedBy { it.first }.forEach { task ->
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            text = formatDate(task.first),
+                                            fontWeight = FontWeight.SemiBold
+                                        )
+                                        Text(
+                                            text = task.third,
+                                            modifier = Modifier.padding(start = 8.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
-                        Screen.Settings -> {
+
+                        Screen.Settings ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("settingsView")
+                                    .padding(16.dp)
+                            )
+                            {
                             SettingsContent(
                                 isDarkMode = isDarkMode,
                                 onToggleDarkMode = onToggleDarkMode,
@@ -256,10 +306,24 @@ fun MainScreen(
                                 }
                             )
                         }
-                        Screen.Help -> {
+                        Screen.Help ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("helpView")
+                                    .padding(16.dp)
+                            )
+                            {
                             PomocScreen()
                         }
-                        Screen.About -> {
+                        Screen.About ->
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .testTag("aboutView")
+                                    .padding(16.dp)
+                            )
+                            {
                             ONamaScreen()
                         }
                     }
@@ -358,6 +422,13 @@ fun loadTasksForUser(
         .addOnFailureListener { exception ->
             onError(exception)
         }
+}
+
+fun logout(context: Context) {
+    FirebaseAuth.getInstance().signOut()
+    val intent = Intent(context, LoginActivity::class.java)
+    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+    context.startActivity(intent)
 }
 
 @Composable
@@ -664,24 +735,47 @@ fun AddTaskDialog(onDismiss: () -> Unit, onSave: (LocalDate, Color, String) -> U
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Dodaj obavezu") },
+        title = { Text("Dodaj obavezu", modifier = Modifier.testTag("addTaskDialogTitle")) },
         text = {
-            Column {
-                Text("Datum: ${selectedDate?.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) ?: "nije odabran"}")
+            Column(modifier = Modifier.testTag("addTaskDialogContent")) {
+                Text(
+                    "Datum: ${selectedDate?.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) ?: "nije odabran"}",
+                    modifier = Modifier.testTag("selectedDateText")
+                )
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Button(onClick = { showDatePicker = true }) {
+                Button(
+                    onClick = { showDatePicker = true },
+                    modifier = Modifier.testTag("selectDateButton")
+                ) {
                     Text("Odaberi datum")
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                OutlinedTextField(taskType, { taskType = it }, label = { Text("Vrsta obaveze") })
-                OutlinedTextField(taskName, { taskName = it }, label = { Text("Naziv obaveze") })
-                OutlinedTextField(taskTime, { taskTime = it }, label = { Text("Vrijeme (opcionalno)") })
+
+                OutlinedTextField(
+                    value = taskType,
+                    onValueChange = { taskType = it },
+                    label = { Text("Vrsta obaveze") },
+                    modifier = Modifier.testTag("taskTypeInput")
+                )
+                OutlinedTextField(
+                    value = taskName,
+                    onValueChange = { taskName = it },
+                    label = { Text("Naziv obaveze") },
+                    modifier = Modifier.testTag("taskNameInput")
+                )
+                OutlinedTextField(
+                    value = taskTime,
+                    onValueChange = { taskTime = it },
+                    label = { Text("Vrijeme (opcionalno)") },
+                    modifier = Modifier.testTag("taskTimeInput")
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Boja:")
-                Row {
+
+                Text("Boja:", modifier = Modifier.testTag("colorLabel"))
+                Row(modifier = Modifier.testTag("colorRow")) {
                     listOf(Color.Red, Color.Green, Color.Blue, Color.Yellow).forEach { color ->
                         Box(
                             Modifier
@@ -690,27 +784,35 @@ fun AddTaskDialog(onDismiss: () -> Unit, onSave: (LocalDate, Color, String) -> U
                                 .clip(MaterialTheme.shapes.small)
                                 .background(color)
                                 .clickable { selectedColor = color }
+                                .testTag("colorBox_${color.toArgb()}") // ili custom ime za boju
                         )
                     }
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                if (selectedDate != null && taskType.isNotBlank() && taskName.isNotBlank()) {
-                    val details = "$taskType: $taskName ${if (taskTime.isNotBlank()) "- $taskTime" else ""}"
-                    onSave(selectedDate, selectedColor, details)
-                }
-            }) {
+            TextButton(
+                onClick = {
+                    if (selectedDate != null && taskType.isNotBlank() && taskName.isNotBlank()) {
+                        val details = "$taskType: $taskName ${if (taskTime.isNotBlank()) "- $taskTime" else ""}"
+                        onSave(selectedDate, selectedColor, details)
+                    }
+                },
+                modifier = Modifier.testTag("saveButton")
+            ) {
                 Text("Spremi")
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.testTag("cancelButton")
+            ) {
                 Text("Odustani")
             }
         }
     )
+
 
     if (showDatePicker) {
         DatePickerDialog(

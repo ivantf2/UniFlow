@@ -1,8 +1,9 @@
-package com.example.uniflow
+package stariTestovi
 
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
+import com.example.uniflow.LoginActivity
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -18,10 +19,10 @@ class LoginToSettingsTest {
     fun endToEnd_Login_OpenDrawer_NavigateToSettings() {
         val taskText = "Kolokvij: Operacijska Istraživanja - 12:00"
         // Unesi korisničko ime
-        composeTestRule.onNodeWithText("Korisničko ime").performTextInput("TestKorisnik")
+        composeTestRule.onNodeWithText("Korisničko ime").performTextInput("ivan@test.hr")
 
         // Unesi lozinku
-        composeTestRule.onNodeWithText("Lozinka").performTextInput("tajna")
+        composeTestRule.onNodeWithText("Lozinka").performTextInput("ivan123")
 
         // Klikni gumb Prijava
         composeTestRule.onNodeWithText("Prijava").performClick()

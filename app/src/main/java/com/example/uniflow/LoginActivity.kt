@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
@@ -66,7 +67,9 @@ fun LoginScreen(onLogin: (String) -> Unit) {
                 value = username,
                 onValueChange = { username = it },
                 label = { Text("Korisničko ime") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("usernameField"),
                 shape = RoundedCornerShape(12.dp)
             )
 
@@ -77,7 +80,9 @@ fun LoginScreen(onLogin: (String) -> Unit) {
                 onValueChange = { password = it },
                 label = { Text("Lozinka") },
                 visualTransformation = PasswordVisualTransformation(),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("passwordField"),
                 shape = RoundedCornerShape(12.dp)
             )
 
